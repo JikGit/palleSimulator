@@ -15,16 +15,19 @@ class Palla
         float mass;
         float radius;
         bool floating;
+        bool canFloat, canMove;
 
     public:
-        Palla(float x, float y, float vX, float vY, float massBody, float radius, sf::Color color = sf::Color::Red, bool floating = true) 
+        Palla(float x, float y, float vX, float vY, float massBody, float radius, sf::Color color = sf::Color::Red, bool canFloat = true, bool canMove = true) 
         {
             this->pos = {x, y};
             this->vel = {vX, vY};
             this->mass = massBody;
             this->radius = radius;
             
-            this-> floating = floating;
+            this->floating = floating;
+            this->canFloat = canFloat;
+            this->canMove = canMove;
 
             this->body.setRadius(radius);
             this->body.setFillColor(color);
@@ -62,8 +65,8 @@ class Palla
 
         void updatePos() 
         {
-            pos.x += vel.x + 1/FRAME_RATE;
-            pos.y += vel.y + 1/FRAME_RATE;
+            pos.x += vel.x * 1/FRAME_RATE;
+            pos.y += vel.y * 1/FRAME_RATE;
 
             if (this->pos.x >= WIDTH-this->radius || this->pos.x - this->radius <= 0 )
                 this->vel.x *= -1;
@@ -74,18 +77,18 @@ class Palla
 
         void update_vel() 
         {
-            if (this->floating) 
-                vel.y += G * 1/FRAME_RATE;
-            else
-                this->floating = true;
+            if (this->floating && this->canFloat) 
+                vel.y += G + 1/FRAME_RATE;
 
             this->updatePos();
         }
         
         bool isHitting(sf::Vector2f pos, float radius) 
         {
-            this->floating = false;
-            return sqrt(pow(this->pos.x - pos.x, 2) + pow(this->pos.y - pos.y, 2)) <= radius + this->radius;
+            bool hitting = sqrt(pow(this->pos.x - pos.x, 2) + pow(this->pos.y - pos.y, 2)) <= radius + this->radius;
+            if (hitting)        this->floating = false;
+            else                this->floating = true;
+            return hitting;
         }
 
         void hitting(Palla& p) {
@@ -95,23 +98,21 @@ class Palla
 
             const float THETA = atan2(pos2y - pos1y, pos2x - pos1x);
             const float mTot = m1 + m2;
+            
+            pos1x += this->radius*2;
+            pos1y += this->radius*2;
 
             //palle sovrapposte
-            const float D = -this->radius - p.getRadius() + sqrt(pow(pos1x - pos2x, 2) + pow(pos1y - pos2y, 2));
-            if (D < 0) 
-            {
+            /* const float D = -this->radius - p.getRadius() + sqrt(pow(pos1x - pos2x, 2) + pow(pos1y - pos2y, 2)); */
+            /* if (D < 0) */ 
+            /* { */
                 /* pos1x += this->radius; */
                 /* pos1y += this->radius; */
                 /* const float ALPHA = atan2(vel1y, vel1x); */
                 /* const float GAMMA = ALPHA + THETA; */
                 /* pos1x += D * sin(GAMMA); */
                 /* pos1y += D * cos(GAMMA); */
-
-                /* std::cout << "asdfsafasddfas" << std::endl; */
-                /* std::cout << -this->radius - p.getRadius() + sqrt(pow(pos1x - pos2x, 2) + pow(pos1y - pos2y, 2)); */
-                /* std::cout << std::endl; */
-                /* std::cout << std::endl; */
-            }
+            /* } */
 
 
             float v1r = (vel1x * cos(THETA)) + (vel1y * sin(THETA));
