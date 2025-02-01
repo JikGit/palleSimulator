@@ -14,14 +14,14 @@ int main()
     window.setFramerateLimit(FRAME_RATE);
 
     std::vector < Palla > palle;
-    /* for (int i = 0; i < 5; i++) { */
-    /*     palle.push_back(Palla(rand() % WIDTH, rand() % HEIGHT, 5, 5, 10, 40, sf::Color(rand() % 255, rand() % 255, rand() % 255))); */
-    /* } */
+    for (int i = 0; i < 10; i++) {
+        palle.push_back(Palla(rand() % WIDTH, rand() % HEIGHT, 5, 5, 10, 40, sf::Color(rand() % 255, rand() % 255, rand() % 255)));
+    }
 
-    Palla palla = Palla(205, 100, 0, 10, 20, 30, sf::Color::Red, false);
-    Palla palla2 = Palla(205, 500, 0, 0, 200, 30, sf::Color::Red, false);
-    palle.push_back(palla);
-    palle.push_back(palla2);
+    /* Palla palla = Palla(205, 100, 0, 10, 20, 30, sf::Color::Red, false); */
+    /* Palla palla2 = Palla(205, 500, 0, 0, 200, 30, sf::Color::Red, false); */
+    /* palle.push_back(palla); */
+    /* palle.push_back(palla2); */
 
 	while (window.isOpen())
 	{
