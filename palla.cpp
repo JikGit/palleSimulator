@@ -24,13 +24,14 @@ class Palla
             this->vel = {vX, vY};
             this->mass = massBody;
             this->radius = radius;
-            
-            this->floating = floating;
+
+            this->floating = canFloat;
             this->canFloat = canFloat;
             this->canMove = canMove;
 
             this->body.setRadius(radius);
             this->body.setFillColor(color);
+            this->body.setPosition(pos);
         }
 
         void render(sf::RenderWindow& window)
@@ -48,11 +49,6 @@ class Palla
             return this->vel;
         }
 
-        void setVel(float x, float y) {
-            this->vel.x = x;
-            this->vel.y = y;
-        }
-
         float getRadius() 
         {
             return this->radius;
@@ -63,77 +59,121 @@ class Palla
             return this->mass;
         }
 
-        void updatePos() 
+        bool getCanMove() 
         {
-            pos.x += vel.x * 1/FRAME_RATE;
-            pos.y += vel.y * 1/FRAME_RATE;
+            return this->canMove;
+        }
+
+        void setVel(float x, float y) {
+            this->vel.y = y;
+            this->vel.x = x;
+        }
+
+        void setPos(sf::Vector2f pos) 
+        {
+            if (!this->canMove) return;
+            this->body.setPosition(pos);
+        }
+
+        void updatePhysics(float dt) 
+        {
+            if (!this->canMove) return;
 
             if (this->pos.x >= WIDTH-this->radius || this->pos.x - this->radius <= 0 )
                 this->vel.x *= -1;
             if (this->pos.y >= HEIGHT-this->radius || this->pos.y + this->radius <= 0)
                 this->vel.y *= -1;
-            this->body.setPosition(this->pos);
-        }
 
-        void update_vel() 
-        {
             if (this->floating && this->canFloat) 
-                vel.y += G + 1/FRAME_RATE;
+                vel.y += G * dt;
 
-            this->updatePos();
+            pos.x += vel.x * dt;
+            pos.y += vel.y * dt;
+
+            this->setPos(this->pos);
         }
         
         bool isHitting(sf::Vector2f pos, float radius) 
         {
-            bool hitting = sqrt(pow(this->pos.x - pos.x, 2) + pow(this->pos.y - pos.y, 2)) <= radius + this->radius;
+            float dx = this->pos.x - pos.x;
+            float dy = this->pos.y - pos.y;
+            float radiusSum = this->radius + radius;
+            bool hitting = dx * dx + dy * dy <= radiusSum * radiusSum;
+
             if (hitting)        this->floating = false;
             else                this->floating = true;
             return hitting;
         }
 
+        bool overlap(Palla& p) {
+            float pos1x = this->getPos().x, pos1y = this->getPos().y, pos2x = p.getPos().x, pos2y = p.getPos().y;
+            const float overlap = (this->radius + p.getRadius()) - sqrt(pow(pos1x - pos2x, 2) + pow(pos1y - pos2y, 2));
+            if (overlap > 0) {
+                const float dx = pos2x - pos1x;
+                const float dy = pos2y - pos1y;
+                const float distance = sqrt(dx * dx + dy * dy);
+                const float adjustX = (dx / distance) * overlap / 2;
+                const float adjustY = (dy / distance) * overlap / 2;
+
+                this->pos.x -= adjustX;
+                this->pos.y -= adjustY;
+                p.pos.x += adjustX;
+                p.pos.y += adjustY;
+
+                return 0;
+            }
+            return 1;
+        }
+
+        sf::Vector2f prova (float vr, float vt, const float THETA) 
+        {
+            float newVx = vr * cos(THETA) - vt * sin(THETA);
+            float newVy = vr * sin(THETA) + vt * cos(THETA);
+            sf::Vector2f newV = {newVx, newVy};
+            return newV;
+        }
+
         void hitting(Palla& p) {
             float m1 = this->mass, m2 = p.getMass();
-            float pos1x = this->pos.x, pos1y = this->pos.y, pos2x = p.getPos().x, pos2y = p.getPos().y;
-            float vel1x = this->vel.x, vel1y = this->vel.y, vel2x = p.getVel().x, vel2y = p.getVel().y;
-
-            const float THETA = atan2(pos2y - pos1y, pos2x - pos1x);
+            float pos1x = this->getPos().x, pos1y = this->getPos().y, pos2x = p.getPos().x, pos2y = p.getPos().y;
+            float vel1x = this->getVel().x, vel1y = this->getVel().y, vel2x = p.getVel().x, vel2y = p.getVel().y;
             const float mTot = m1 + m2;
-            
-            pos1x += this->radius*2;
-            pos1y += this->radius*2;
 
             //palle sovrapposte
-            /* const float D = -this->radius - p.getRadius() + sqrt(pow(pos1x - pos2x, 2) + pow(pos1y - pos2y, 2)); */
-            /* if (D < 0) */ 
-            /* { */
-                /* pos1x += this->radius; */
-                /* pos1y += this->radius; */
-                /* const float ALPHA = atan2(vel1y, vel1x); */
-                /* const float GAMMA = ALPHA + THETA; */
-                /* pos1x += D * sin(GAMMA); */
-                /* pos1y += D * cos(GAMMA); */
-            /* } */
+            if (overlap(p)) 
+            {
+                this->setPos(this->pos);
+                p.setPos(p.pos);
+            }
 
-
+            const float THETA = atan2(pos2y - pos1y, pos2x - pos1x);
             float v1r = (vel1x * cos(THETA)) + (vel1y * sin(THETA));
             float v2r = (vel2x * cos(THETA)) + (vel2y * sin(THETA));
-
-            float v1r_old = v1r;
-            float v2r_old = v2r;
-
-            v1r = (v1r_old * (m1 - m2) + 2 * m2 * v2r_old) / mTot;
-            v2r = (v2r_old * (m2 - m1) + 2 * m1 * v1r_old) / mTot;
-
-            float v1t = -vel1x * sin(THETA) + vel1y * cos(THETA);
+            float v1t = (-vel1x * sin(THETA)) + (vel1y * cos(THETA));
             float v2t = -vel2x * sin(THETA) + vel2y * cos(THETA);
 
-            this->vel.x = v1r * cos(THETA) - v1t * sin(THETA);
-            this->vel.y = v1r * sin(THETA) + v1t * cos(THETA);
+            sf::Vector2f new1V;
+            sf::Vector2f new2V;
 
-            float new2Vx = v2r * cos(THETA) - v2t * sin(THETA);
-            float new2Vy = v2r * sin(THETA) + v2t * cos(THETA);
+            if (!p.getCanMove()) 
+            {
+                v1r *= -1;
+                new1V = prova(v1r, v1t, THETA);
+            }else if (!this->getCanMove()) 
+            {
+                v2r *= -1;
+                new2V = prova(v2r, v2t, THETA);
+            }else {
+                float v1r_old = v1r;
+                float v2r_old = v2r;
+                v1r = (v1r_old * (m1 - m2) + 2 * m2 * v2r_old) / mTot;
+                v2r = (v2r_old * (m2 - m1) + 2 * m1 * v1r_old) / mTot;
+                new1V = prova(v1r, v1t, THETA);
+                new2V = prova(v2r, v2t, THETA);
+            }
 
-            p.setVel(new2Vx, new2Vy);
+            this->setVel(new1V.x * MU, new1V.y * MU);
+            p.setVel(new2V.x * MU, new2V.y * MU);
         }
 
         void stop() 
