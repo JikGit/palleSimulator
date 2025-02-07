@@ -31,12 +31,13 @@ class Muro
             this->body.setPosition(pos);
         }
 
-        void isHitting(Palla& p)
+        bool isHitting(Palla& p)
         {
-            if (this->pos.x
+            return true;
+            /* if (this->pos.x */
         }
 
-        void hitting()
+        void hitting(Palla& p)
         {
             p.setVel(0,0);
         }

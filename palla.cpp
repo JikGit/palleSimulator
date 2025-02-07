@@ -65,14 +65,14 @@ class Palla
         }
 
         void setVel(float x, float y) {
-            this->vel.y = y;
-            this->vel.x = x;
+            this->vel = {x,y};
         }
 
         void setPos(sf::Vector2f pos) 
         {
             if (!this->canMove) return;
-            this->body.setPosition(pos);
+            this->pos = pos;
+            this->body.setPosition(this->pos);
         }
 
         void updatePhysics(float dt) 
@@ -87,42 +87,21 @@ class Palla
             if (this->floating && this->canFloat) 
                 vel.y += G * dt;
 
-            pos.x += vel.x * dt;
-            pos.y += vel.y * dt;
-
-            this->setPos(this->pos);
+            this->setPos(this->pos + this->vel * dt);
         }
         
         bool isHitting(sf::Vector2f pos, float radius) 
         {
-            float dx = this->pos.x - pos.x;
-            float dy = this->pos.y - pos.y;
-            float radiusSum = this->radius + radius;
-            bool hitting = dx * dx + dy * dy <= radiusSum * radiusSum;
-
+            bool hitting = sqrt(pow(this->pos.x - pos.x, 2) + pow(this->pos.y - pos.y, 2)) <= radius + this->radius;
             if (hitting)        this->floating = false;
             else                this->floating = true;
             return hitting;
         }
 
-        bool overlap(Palla& p) {
+        float isHoverlapping(Palla& p) {
             float pos1x = this->getPos().x, pos1y = this->getPos().y, pos2x = p.getPos().x, pos2y = p.getPos().y;
             const float overlap = (this->radius + p.getRadius()) - sqrt(pow(pos1x - pos2x, 2) + pow(pos1y - pos2y, 2));
-            if (overlap > 0) {
-                const float dx = pos2x - pos1x;
-                const float dy = pos2y - pos1y;
-                const float distance = sqrt(dx * dx + dy * dy);
-                const float adjustX = (dx / distance) * overlap / 2;
-                const float adjustY = (dy / distance) * overlap / 2;
-
-                this->pos.x -= adjustX;
-                this->pos.y -= adjustY;
-                p.pos.x += adjustX;
-                p.pos.y += adjustY;
-
-                return 0;
-            }
-            return 1;
+            return overlap;
         }
 
         sf::Vector2f prova (float vr, float vt, const float THETA) 
@@ -140,10 +119,17 @@ class Palla
             const float mTot = m1 + m2;
 
             //palle sovrapposte
-            if (overlap(p)) 
+            float overlap = isHoverlapping(p);
+            if (overlap > 0) 
             {
-                this->setPos(this->pos);
-                p.setPos(p.pos);
+                const float dx = pos2x - pos1x;
+                const float dy = pos2y - pos1y;
+                const float distance = sqrt(dx * dx + dy * dy);
+                const float adjustX = (dx / distance) * overlap / 2;
+                const float adjustY = (dy / distance) * overlap / 2;
+
+                this->setPos({pos1x -  adjustX, pos1y - adjustY});
+                p.setPos({pos2x + adjustX, pos2y + adjustY});
             }
 
             const float THETA = atan2(pos2y - pos1y, pos2x - pos1x);
